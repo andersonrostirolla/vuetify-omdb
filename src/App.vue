@@ -4,57 +4,66 @@
       app
       color="primary"
       dark
-    >
-      <div class="d-flex align-center">
-        <v-img
-          alt="Vuetify Logo"
-          class="shrink mr-2"
-          contain
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
-          transition="scale-transition"
-          width="40"
-        />
-
-        <v-img
-          alt="Vuetify Name"
-          class="shrink mt-1 hidden-sm-and-down"
-          contain
-          min-width="100"
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-name-dark.png"
-          width="100"
-        />
-      </div>
-
-      <v-spacer></v-spacer>
-
-      <v-btn
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-        text
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>mdi-open-in-new</v-icon>
-      </v-btn>
-    </v-app-bar>
+    />
 
     <v-main>
-      <HelloWorld/>
+      <Autocomplete
+        :list-movies="listMovies"
+        :requesting="waitingProgress"
+        @change-title="changeTitle"
+      />
     </v-main>
   </v-app>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld';
+import Autocomplete from '@/components/Autocomplete'
+import debounce from '@/utils/debounce'
 
 export default {
   name: 'App',
 
   components: {
-    HelloWorld,
+    Autocomplete
   },
-
   data: () => ({
-    //
+    quantityResults: 0,
+    movies: [],
+    requesting: false,
+    delay: 150
   }),
+  computed: {
+    listMovies () {
+      return this.movies
+    },
+    waitingProgress () {
+      return this.requesting
+    },
+    executeDebouncedTitle () {
+      return debounce(this.fetchOMDB, this.delay)
+    }
+  },
+  methods: {
+    fetchOMDB (title) {
+      window.fetch(`http://localhost:8080/search?q=${title}`, {
+        "headers": {
+          'accept': 'application/json'
+        }
+      })
+        .then(resp => resp.json())
+        .then(({ totalResults, Search }) => {
+          this.quantityResults = totalResults
+          this.movies = Search
+          this.requesting = false
+        })
+        .catch(console.error)
+    },
+    changeTitle (title) {
+      if (title.length > 3) {
+        this.requesting = true
+        this.executeDebouncedTitle(title)
+      }
+    }
+  }
 };
 </script>
